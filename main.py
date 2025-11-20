@@ -1,6 +1,8 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any, Dict
 
 app = FastAPI()
 
@@ -19,6 +21,30 @@ def read_root():
 @app.get("/api/hello")
 def hello():
     return {"message": "Hello from the backend API!"}
+
+# Contact endpoint
+from schemas import ContactMessage
+from database import create_document, db
+
+@app.post("/api/contact")
+def submit_contact(message: ContactMessage) -> Dict[str, Any]:
+    """Accept a contact message and store it in MongoDB if available.
+    Always returns success so the UI can show a friendly confirmation.
+    """
+    stored = False
+    inserted_id = None
+    try:
+        if db is not None:
+            inserted_id = create_document("contactmessage", message)
+            stored = True
+    except Exception as e:
+        stored = False
+    return {
+        "ok": True,
+        "stored": stored,
+        "id": inserted_id,
+        "message": "Thanks for reaching out!"
+    }
 
 @app.get("/test")
 def test_database():
